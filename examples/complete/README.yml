@@ -1,0 +1,10 @@
+title: "Complete Route 53 Resolver Example"
+description: "This example wires the Route 53 Resolver wrapper with metadata, a simulated `vpc_parameter` from the VPC wrapper, hybrid inbound and outbound endpoints over Site-to-Site VPN (`vpn-01`), RAM sharing of outbound FORWARD rules, and a spoke-side association of a shared rule."
+main_purpose: "Show how to call `module.wrapper_route53_resolver` with the same file split as other Standard Platform examples, how `vpc` / `subnet_ids` line up with `vpc_parameter.subnets` keys (`<vpc_key>-<tier>-<az>`), and why inbound plus outbound are both required for bidirectional DNS over VPN."
+key_features:
+  - "**Outbound over vpn-01**: OUTBOUND resolver in private subnets with FORWARD rules toward on-premises DNS (`pjcaba.gob.ar`) reachable over the Site-to-Site VPN."
+  - "**Inbound over vpn-01**: INBOUND resolver so on-premises resolvers can query AWS private hosted zones through the same VPN. Restrict `ingress_cidr_blocks` to the vpn-01 on-prem CIDRs."
+  - "**RAM sharing**: `ram_share_with_organization` publishes outbound FORWARD rules to the whole org; `ram_principals` targets specific account IDs."
+  - "**Spoke association**: `vpc` + `shared_rules` attaches a RAM-shared rule; no endpoint or RAM share is created."
+  - "**VPC keys**: `subnet_ids` uses logical names (`private-a`) resolved as `{vpc}-private-a` in `vpc_parameter.subnets` from the VPC wrapper output."
+  - "**IDs or names**: `resource_ids` / `vpc_id` for AWS IDs; `vpc_name` / `subnet_name` for `tag:Name` data sources; shared rules by `rslvr-rr-…`, `rule_name`, or `domain_name`."
