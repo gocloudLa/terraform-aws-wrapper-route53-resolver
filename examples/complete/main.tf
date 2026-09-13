@@ -25,13 +25,13 @@ module "wrapper_route53_resolver" {
         }
       }
 
-      ## Share FORWARD rules with the organization, or with specific account IDs
-      ram_share_with_organization = true # Default: false
-      # share_rules    = true # Default: false
-      # ram_principals = [
-      #   "123456789012",
-      #   "234567890123"
-      # ]
+      share_rules = true # Default: false
+      ram_principals = [
+        "123456789012",
+        "234567890123"
+      ]
+      # Share with the whole organization (same RAM principal as TGW):
+      # ram_principals = ["arn:aws:organizations::123456789012:organization/o-xxxxxxxxxx"]
       # ram_allow_external_principals = false # Default: false
       # ram_name                      = null
     }
@@ -44,8 +44,6 @@ module "wrapper_route53_resolver" {
       vpc        = "vpc-01"
       subnet_ids = ["private-a", "private-b"]
       direction  = "INBOUND" # Default: "OUTBOUND"
-      # Optional: inbound already implies create_endpoint = true when rules is empty.
-      # create_endpoint = true
 
       # Networks allowed to query this endpoint on TCP/UDP 53 (on-premises CIDRs).
       ingress_cidr_blocks = [
@@ -55,11 +53,9 @@ module "wrapper_route53_resolver" {
 
     # Same hub using AWS resource IDs instead of wrapper keys:
     # "vpn-01-outbound-by-id" = {
-    #   resource_ids = {
-    #     vpc_id     = "vpc-01xxxxxxxxxxxxx"
-    #     subnet_ids = ["subnet-01xxxxxxxxxxxxx", "subnet-02xxxxxxxxxxxxx"]
-    #   }
-    #   direction = "OUTBOUND"
+    #   vpc_id     = "vpc-01xxxxxxxxxxxxx"
+    #   subnet_ids = ["subnet-01xxxxxxxxxxxxx", "subnet-02xxxxxxxxxxxxx"]
+    #   direction  = "OUTBOUND"
     #   rules = {
     #     "onprem" = {
     #       domain_name = "corp.example.com"
@@ -71,14 +67,15 @@ module "wrapper_route53_resolver" {
     # Spoke VPC: attach a rule already shared via RAM. No endpoint, rules, or RAM share.
     "shared-onprem" = {
       vpc = "vpc-01"
-      shared_rules = {
-        "onprem" = "rslvr-rr-01xxxxxxxxxxxxx"
+      rule_associations = {
+        "onprem" = {
+          resolver_rule_id = "rslvr-rr-01xxxxxxxxxxxxx"
+        }
       }
       # Lookup by rule name or domain instead of ID:
       # rule_associations = {
       #   "onprem" = { rule_name = "onprem" }
       #   # "onprem" = { domain_name = "corp.example.com" }
-      #   # "onprem" = { resource_id = "rslvr-rr-01xxxxxxxxxxxxx" }
       # }
       # If the RAM invite is not auto-accepted:
       # accept_resource_share  = true # Default: false

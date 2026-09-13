@@ -4,7 +4,7 @@ main_purpose: "Show how to call `module.wrapper_route53_resolver` with the same 
 key_features:
   - "**Outbound**: OUTBOUND resolver in private subnets with FORWARD rules toward on-premises DNS (`corp.example.com`) at `172.0.0.1` and `172.0.0.2`."
   - "**Inbound**: INBOUND resolver so on-premises resolvers can query AWS private hosted zones through the same VPN. Restrict `ingress_cidr_blocks` to the on-premises CIDRs."
-  - "**RAM sharing**: `ram_share_with_organization` publishes outbound FORWARD rules to the whole org; `ram_principals` targets specific account IDs."
-  - "**Spoke association**: `vpc` + `shared_rules` attaches a RAM-shared rule; no endpoint or RAM share is created."
+  - "**RAM sharing**: `share_rules` plus `ram_principals` (account IDs, or the organization ARN `arn:aws:organizations::<account>:organization/o-…`, same as TGW). A commented org-ARN example is in `main.tf`."
+  - "**Spoke association**: `vpc` + `rule_associations` attaches a RAM-shared rule; no endpoint or RAM share is created."
   - "**VPC keys**: `subnet_ids` uses logical names (`private-a`) resolved as `{vpc}-private-a` in `vpc_parameter.subnets` from the VPC wrapper output."
-  - "**IDs or names**: `resource_ids` / `vpc_id` for AWS IDs; `vpc_name` / `subnet_name` for `tag:Name` data sources; shared rules by `rslvr-rr-…`, `rule_name`, or `domain_name`."
+  - "**IDs**: `vpc_id` and raw subnet IDs when there is no wrapper-vpc output; shared rules by `resolver_rule_id` (`rslvr-rr-…`), `rule_name`, or `domain_name`."

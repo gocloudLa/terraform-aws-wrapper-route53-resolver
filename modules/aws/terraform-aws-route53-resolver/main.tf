@@ -138,7 +138,7 @@ resource "aws_ram_resource_share" "this" {
   lifecycle {
     precondition {
       condition     = length(var.ram_principals) > 0
-      error_message = "Sharing resolver rules requires ram_principals (account IDs) or ram_share_with_organization = true."
+      error_message = "Sharing resolver rules requires ram_principals (account IDs, OU ARNs, or an organization ARN)."
     }
   }
 }
