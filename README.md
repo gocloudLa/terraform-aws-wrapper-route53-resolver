@@ -56,8 +56,7 @@ route53_resolver_parameters = {
   }
 
   # Inbound: on-premises → AWS. On-premises resolvers query this endpoint so
-  # they can resolve private hosted zones in AWS. No FORWARD rules — inbound
-  # creates the endpoint because direction is INBOUND. After apply, give the
+  # they can resolve private hosted zones in AWS. No FORWARD rules. After apply, give the
   # inbound ENI IPs (resolver_endpoint_ip_addresses) to on-premises DNS as forwarders.
   "vpn-01-inbound" = {
     vpc        = "vpc-01"
@@ -83,9 +82,10 @@ route53_resolver_parameters = {
   #   }
   # }
 
-  # Spoke VPC: attach a rule already shared via RAM. No endpoint, rules, or RAM share.
+  # Spoke account: associate a RAM-shared rule. Requires create_endpoint = false.
   "shared-onprem" = {
-    vpc = "vpc-01"
+    vpc             = "vpc-01"
+    create_endpoint = false # Default: true
     rule_associations = {
       "onprem" = {
         resolver_rule_id = "rslvr-rr-01xxxxxxxxxxxxx"
@@ -107,7 +107,7 @@ route53_resolver_parameters = {
 ## 🔧 Additional Features Usage
 
 ### Outbound forwarding to on-premises DNS
-Create an OUTBOUND endpoint in private subnets that already have a route to on-premises networks (Site-to-Site VPN, TGW). Each rule in `rules` forwards a domain to one or more target IPs (`ip`, `ip:port`, or `{ ip, port }`). The wrapper associates the rules with the endpoint VPC by default (`associate_vpc = true`). An OUTBOUND endpoint is created when `rules` is non-empty (or `create_endpoint = true`). At least two subnets in different AZs are required.
+Create an OUTBOUND endpoint in private subnets that already have a route to on-premises networks (Site-to-Site VPN, TGW). Each rule in `rules` forwards a domain to one or more target IPs (`ip`, `ip:port`, or `{ ip, port }`). The wrapper associates the rules with the endpoint VPC by default (`associate_vpc = true`). At least two subnets in different AZs are required.
 
 
 <details><summary>Forward a corporate domain to on-premises DNS</summary>
@@ -133,7 +133,7 @@ route53_resolver_parameters = {
 
 
 ### Hybrid DNS over Site-to-Site VPN
-Bidirectional hybrid DNS needs two endpoints in the same private subnets that already route over Site-to-Site VPN and Transit Gateway. OUTBOUND is AWS → on-premises: workloads (and RAM-shared spokes) forward `corp.example.com` to on-premises DNS IPs. INBOUND is on-premises → AWS: on-premises resolvers query the inbound ENIs so they can resolve private hosted zones. INBOUND does not use `rules`; `direction = "INBOUND"` creates the endpoint. Restrict `ingress_cidr_blocks` to the on-premises CIDRs. After apply, configure on-premises DNS to forward AWS private zones to `resolver_endpoint_ip_addresses["vpn-01-inbound"]`. RAM shares only the outbound FORWARD rules, not the inbound endpoint.
+Bidirectional hybrid DNS needs two endpoints in the same private subnets that already route over Site-to-Site VPN and Transit Gateway. OUTBOUND is AWS → on-premises: workloads (and RAM-shared spokes) forward `corp.example.com` to on-premises DNS IPs. INBOUND is on-premises → AWS: on-premises resolvers query the inbound ENIs so they can resolve private hosted zones. INBOUND does not use `rules`. Restrict `ingress_cidr_blocks` to the on-premises CIDRs. After apply, configure on-premises DNS to forward AWS private zones to `resolver_endpoint_ip_addresses["vpn-01-inbound"]`. RAM shares only the outbound FORWARD rules, not the inbound endpoint.
 
 
 <details><summary>Outbound (AWS resolves on-premises domains)</summary>
@@ -177,7 +177,7 @@ route53_resolver_parameters = {
 
 
 ### RAM sharing of resolver rules
-AWS RAM shares the resolver rules, not the endpoint. Set `share_rules = true` and `ram_principals`: account IDs, OU ARNs, or the organization ARN (`arn:aws:organizations::<management-account>:organization/o-…`), the same contract as the TGW wrapper. In the consumer account, pass `vpc` plus `rule_associations` (`resolver_rule_id`, `rule_name`, or `domain_name`) — no endpoint or RAM share when `rules` is empty. Enable RAM sharing with AWS Organizations in the management account so intra-org shares are auto-accepted. If the invite is not auto-accepted, set `accept_resource_share = true` and `ram_resource_share_arn`.
+AWS RAM shares the resolver rules, not the endpoint. Set `share_rules = true` and `ram_principals`: account IDs, OU ARNs, or the organization ARN (`arn:aws:organizations::<management-account>:organization/o-…`), the same contract as the TGW wrapper. In the consumer account, pass that account's `vpc`, `create_endpoint = false`, and `rule_associations` (`resolver_rule_id`, `rule_name`, or `domain_name`). Enable RAM sharing with AWS Organizations in the management account so intra-org shares are auto-accepted. If the invite is not auto-accepted, set `accept_resource_share = true` and `ram_resource_share_arn`.
 
 
 <details><summary>Share rules with specific account IDs</summary>
@@ -229,7 +229,8 @@ route53_resolver_parameters = {
 ```hcl
 route53_resolver_parameters = {
   "shared-onprem" = {
-    vpc = "vpc-01"
+    vpc             = "vpc-01"
+    create_endpoint = false # Default: true
     rule_associations = {
       "corp" = {
         resolver_rule_id = "rslvr-rr-01xxxxxxxxxxxxx"
@@ -297,7 +298,7 @@ route53_resolver_parameters = {
 | subnet_ids                    | Wrapper keys (`private-a` → `{vpc}-private-a`) or AWS subnet IDs.                                  | list(string) | []         | no       |
 | ip_addresses                  | Optional explicit ENI IPs (`subnet_id`, `ip`).                                                     | list(object) | []         | no       |
 | direction                     | Resolver endpoint direction (`OUTBOUND` or `INBOUND`).                                             | string       | "OUTBOUND" | no       |
-| create_endpoint               | Create the resolver endpoint. When omitted, true if `rules` is set or `direction` is `INBOUND`.    | bool         | null       | no       |
+| create_endpoint               | Create the resolver endpoint. Set `false` to associate shared rules only.                          | bool         | true       | no       |
 | create_security_group         | Create the endpoint security group.                                                                | bool         | true       | no       |
 | security_group_ids            | Additional security group IDs attached to the endpoint.                                            | list(string) | []         | no       |
 | ingress_cidr_blocks           | CIDRs allowed to query an INBOUND endpoint on port 53.                                             | list(string) | []         | no       |
@@ -326,8 +327,8 @@ route53_resolver_parameters = {
 - ⚠️ **Two AZs**: A resolver endpoint requires at least two IP addresses in different Availability Zones (`subnet_ids` of length >= 2).
 - 🔒 **INBOUND ingress**: `ingress_cidr_blocks` is required when creating an INBOUND endpoint security group. The wrapper does not default that rule to `0.0.0.0/0`.
 - ℹ️ **vpc_parameter**: Standard Platform `modules/base` sets `vpc_parameter = module.wrapper_vpc`. Set `vpc` / `subnet_ids` to wrapper keys (`vpc-01`, `private-a` → `subnets["vpc-01-private-a"]`). Use `vpc_id` and raw subnet IDs when there is no wrapper-vpc output. `vpc-01` is a map key, not an AWS VPC ID.
-- ℹ️ **Inbound vs outbound**: OUTBOUND forwards AWS queries to on-premises DNS (`rules`). INBOUND lets on-premises resolvers query AWS private hosted zones; it has no `rules`. `direction = "INBOUND"` creates the endpoint. After apply, point on-premises DNS at `resolver_endpoint_ip_addresses`.
-- ℹ️ **RAM vs endpoint**: Only FORWARD rules are shareable. Spoke VPCs associate the shared rule (`vpc` + `rule_associations`). An OUTBOUND endpoint is created only when `rules` is non-empty (or `create_endpoint = true`).
+- ℹ️ **Inbound vs outbound**: OUTBOUND forwards AWS queries to on-premises DNS (`rules`). INBOUND lets on-premises resolvers query AWS private hosted zones; it has no `rules`. After apply, point on-premises DNS at `resolver_endpoint_ip_addresses`.
+- ℹ️ **RAM vs endpoint**: Only FORWARD rules are shareable. Spoke VPCs associate the shared rule (`vpc` + `rule_associations`) and set `create_endpoint = false`.
 
 
 

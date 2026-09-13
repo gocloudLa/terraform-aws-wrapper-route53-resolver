@@ -5,6 +5,6 @@ key_features:
   - "**Outbound**: OUTBOUND resolver in private subnets with FORWARD rules toward on-premises DNS (`corp.example.com`) at `172.0.0.1` and `172.0.0.2`."
   - "**Inbound**: INBOUND resolver so on-premises resolvers can query AWS private hosted zones through the same VPN. Restrict `ingress_cidr_blocks` to the on-premises CIDRs."
   - "**RAM sharing**: `share_rules` plus `ram_principals` (account IDs, or the organization ARN `arn:aws:organizations::<account>:organization/o-…`, same as TGW). A commented org-ARN example is in `main.tf`."
-  - "**Spoke association**: `vpc` + `rule_associations` attaches a RAM-shared rule; no endpoint or RAM share is created."
+  - "**Spoke association**: in the consumer account, `vpc` + `create_endpoint = false` + `rule_associations` attaches a RAM-shared rule (no endpoint, no RAM share)."
   - "**VPC keys**: `subnet_ids` uses logical names (`private-a`) resolved as `{vpc}-private-a` in `vpc_parameter.subnets` from the VPC wrapper output."
   - "**IDs**: `vpc_id` and raw subnet IDs when there is no wrapper-vpc output; shared rules by `resolver_rule_id` (`rslvr-rr-…`), `rule_name`, or `domain_name`."

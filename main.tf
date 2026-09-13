@@ -4,7 +4,7 @@ module "route53_resolver" {
   # Key: route53_resolver_parameters map key (e.g. "vpn-01-outbound").
   for_each = var.route53_resolver_parameters
 
-  create_endpoint               = try(each.value.create_endpoint, var.route53_resolver_defaults.create_endpoint, length(try(each.value.rules, var.route53_resolver_defaults.rules, {})) > 0 || upper(try(each.value.direction, var.route53_resolver_defaults.direction, "OUTBOUND")) == "INBOUND")
+  create_endpoint               = try(each.value.create_endpoint, var.route53_resolver_defaults.create_endpoint, true)
   name                          = try(each.value.name, var.route53_resolver_defaults.name, "${local.common_name}-${each.key}")
   vpc_id                        = local.resolver_vpc_id[each.key]
   subnet_ids                    = local.resolver_subnet_ids[each.key]

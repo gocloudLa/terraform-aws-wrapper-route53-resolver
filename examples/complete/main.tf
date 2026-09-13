@@ -37,8 +37,7 @@ module "wrapper_route53_resolver" {
     }
 
     # Inbound: on-premises → AWS. On-premises resolvers query this endpoint so
-    # they can resolve private hosted zones in AWS. No FORWARD rules — inbound
-    # creates the endpoint because direction is INBOUND. After apply, give the
+    # they can resolve private hosted zones in AWS. No FORWARD rules. After apply, give the
     # inbound ENI IPs (resolver_endpoint_ip_addresses) to on-premises DNS as forwarders.
     "vpn-01-inbound" = {
       vpc        = "vpc-01"
@@ -64,9 +63,10 @@ module "wrapper_route53_resolver" {
     #   }
     # }
 
-    # Spoke VPC: attach a rule already shared via RAM. No endpoint, rules, or RAM share.
+    # Spoke account: associate a RAM-shared rule. Requires create_endpoint = false.
     "shared-onprem" = {
-      vpc = "vpc-01"
+      vpc             = "vpc-01"
+      create_endpoint = false # Default: true
       rule_associations = {
         "onprem" = {
           resolver_rule_id = "rslvr-rr-01xxxxxxxxxxxxx"
