@@ -1,0 +1,32 @@
+module "route53_resolver" {
+  source = "./modules/aws/terraform-aws-route53-resolver"
+
+  # Key: route53_resolver_parameters map key (e.g. "vpn-01-outbound").
+  for_each = var.route53_resolver_parameters
+
+  create_endpoint               = try(each.value.create_endpoint, var.route53_resolver_defaults.create_endpoint, true)
+  name                          = try(each.value.name, var.route53_resolver_defaults.name, "${local.common_name}-${each.key}")
+  vpc_id                        = local.resolver_vpc_id[each.key]
+  subnet_ids                    = local.resolver_subnet_ids[each.key]
+  ip_addresses                  = try(local.resolver_ip_addresses[each.key], [])
+  direction                     = upper(try(each.value.direction, var.route53_resolver_defaults.direction, "OUTBOUND"))
+  protocols                     = try(each.value.protocols, var.route53_resolver_defaults.protocols, null)
+  resolver_endpoint_type        = try(each.value.resolver_endpoint_type, var.route53_resolver_defaults.resolver_endpoint_type, "IPV4")
+  resolver_endpoint_id          = try(each.value.resolver_endpoint_id, var.route53_resolver_defaults.resolver_endpoint_id, null)
+  create_security_group         = try(each.value.create_security_group, var.route53_resolver_defaults.create_security_group, true)
+  security_group_name           = try(each.value.security_group_name, var.route53_resolver_defaults.security_group_name, "${local.common_name}-${each.key}-sg")
+  security_group_description    = try(each.value.security_group_description, var.route53_resolver_defaults.security_group_description, "Security group for Route 53 Resolver endpoint")
+  security_group_ids            = try(each.value.security_group_ids, var.route53_resolver_defaults.security_group_ids, [])
+  ingress_cidr_blocks           = try(each.value.ingress_cidr_blocks, var.route53_resolver_defaults.ingress_cidr_blocks, [])
+  egress_cidr_blocks            = try(each.value.egress_cidr_blocks, var.route53_resolver_defaults.egress_cidr_blocks, [])
+  rules                         = try(local.resolver_rules[each.key], {})
+  associate_vpc                 = try(each.value.associate_vpc, var.route53_resolver_defaults.associate_vpc, true)
+  rule_associations             = try(local.resolver_rule_associations[each.key], {})
+  share_rules                   = try(each.value.share_rules, var.route53_resolver_defaults.share_rules, false)
+  ram_name                      = try(each.value.ram_name, var.route53_resolver_defaults.ram_name, "${local.common_name}-${each.key}-rules")
+  ram_principals                = try(each.value.ram_principals, var.route53_resolver_defaults.ram_principals, [])
+  ram_allow_external_principals = try(each.value.ram_allow_external_principals, var.route53_resolver_defaults.ram_allow_external_principals, false)
+  ram_resource_share_arn        = try(each.value.ram_resource_share_arn, var.route53_resolver_defaults.ram_resource_share_arn, null)
+  ram_accept_share              = try(each.value.accept_resource_share, var.route53_resolver_defaults.accept_resource_share, false)
+  tags                          = merge(local.common_tags, try(each.value.tags, var.route53_resolver_defaults.tags, null), { Name = "${local.common_name}-${each.key}" })
+}
